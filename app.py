@@ -6,25 +6,30 @@ from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import requests
 from config import API_KEY, BASE_ADDRESS, MAX_ORDERS_PER_COURIER
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # ... імпортуйте ваші функції для розрахунку маршруту тут (наприклад, get_coordinates, get_distance_matrix, solve_tsp)
 
 # --- Google Maps API helpers ---
 def get_coordinates(address, api_key=API_KEY):
-    print(f"DEBUG: Запит координат для адреси: {address}")
+    logger.info(f"DEBUG: Запит координат для адреси: {address}")
     url = 'https://maps.googleapis.com/maps/api/geocode/json'
     params = {'address': address, 'key': api_key}
-    print(f"DEBUG: URL: {url}")
-    print(f"DEBUG: params: {params}")
+    logger.info(f"DEBUG: URL: {url}")
+    logger.info(f"DEBUG: params: {params}")
     response = requests.get(url, params=params)
-    print(f"DEBUG: status_code: {response.status_code}")
-    print(f"DEBUG: response.text: {response.text}")
+    logger.info(f"DEBUG: status_code: {response.status_code}")
+    logger.info(f"DEBUG: response.text: {response.text}")
     data = response.json()
     if data['status'] == 'OK':
         location = data['results'][0]['geometry']['location']
-        print(f"DEBUG: Знайдено координати: {location}")
+        logger.info(f"DEBUG: Знайдено координати: {location}")
         return location['lat'], location['lng']
     else:
-        print(f"ERROR: Не вдалося знайти координати для адреси: {address}, статус: {data['status']}")
+        logger.error(f"ERROR: Не вдалося знайти координати для адреси: {address}, статус: {data['status']}")
         raise Exception(f"Не вдалося знайти координати для адреси: {address}")
 
 def get_distance_matrix(locations, api_key=API_KEY):
