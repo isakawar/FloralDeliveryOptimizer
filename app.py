@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 import pandas as pd
 import os
 import tempfile
@@ -10,14 +10,21 @@ from config import API_KEY, BASE_ADDRESS, MAX_ORDERS_PER_COURIER
 
 # --- Google Maps API helpers ---
 def get_coordinates(address, api_key=API_KEY):
+    print(f"DEBUG: Запит координат для адреси: {address}")
     url = 'https://maps.googleapis.com/maps/api/geocode/json'
     params = {'address': address, 'key': api_key}
+    print(f"DEBUG: URL: {url}")
+    print(f"DEBUG: params: {params}")
     response = requests.get(url, params=params)
+    print(f"DEBUG: status_code: {response.status_code}")
+    print(f"DEBUG: response.text: {response.text}")
     data = response.json()
     if data['status'] == 'OK':
         location = data['results'][0]['geometry']['location']
+        print(f"DEBUG: Знайдено координати: {location}")
         return location['lat'], location['lng']
     else:
+        print(f"ERROR: Не вдалося знайти координати для адреси: {address}, статус: {data['status']}")
         raise Exception(f"Не вдалося знайти координати для адреси: {address}")
 
 def get_distance_matrix(locations, api_key=API_KEY):
@@ -193,6 +200,10 @@ def index():
     print('DEBUG error:', error)
     print('DEBUG total_distance:', total_distance)
     return render_template('index.html', result=result, error=error, total_distance=total_distance)
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    return send_from_directory('static', filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
