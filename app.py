@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify
 import pandas as pd
 import os
 import tempfile
@@ -69,6 +69,138 @@ def minutes_to_hhmm(minutes):
     return f"{h:02d}:{m:02d}"
 
 app = Flask(__name__)
+
+@app.route('/')
+def landing():
+    return render_template('home.html')
+
+@app.route('/generator', methods=['GET', 'POST'])
+def generator():
+    if request.method == 'POST':
+        # ... логіка розрахунку маршруту ...
+        result = None
+        error = None
+        total_distance = 0
+        file = request.files.get('file')
+        couriers = int(request.form.get('couriers', 1))
+        departure_time_str = request.form.get('departure_time', '08:00')
+        h, m = map(int, departure_time_str.split(':'))
+        departure_time_sec = h * 3600 + m * 60
+        if file and file.filename.endswith('.csv'):
+            try:
+                temp = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+                file.save(temp.name)
+                orders = pd.read_csv(temp.name)
+                addresses = orders['address'].tolist()
+                base_coords = get_coordinates(BASE_ADDRESS)
+                coords = []
+                for addr in addresses:
+                    try:
+                        coord = get_coordinates(addr)
+                        coords.append(coord)
+                    except Exception as e:
+                        coords.append((None, None))
+                all_points = [base_coords] + coords
+                time_matrix, distance_matrix = get_distance_matrix(all_points)
+                def parse_time_window(row):
+                    if pd.isna(row['time_window_start']) or pd.isna(row['time_window_end']):
+                        return (0, 24*3600)
+                    h1, m1 = map(int, str(row['time_window_start']).split(':'))
+                    h2, m2 = map(int, str(row['time_window_end']).split(':'))
+                    return (h1*3600 + m1*60, h2*3600 + m2*60)
+                time_windows = [(departure_time_sec, 24*3600)]
+                for _, row in orders.iterrows():
+                    tw = parse_time_window(row)
+                    time_windows.append(tw)
+                def solve_vrp(distance_matrix, time_matrix, num_vehicles, max_orders_per_courier, time_windows):
+                    manager = pywrapcp.RoutingIndexManager(len(distance_matrix), num_vehicles, 0)
+                    routing = pywrapcp.RoutingModel(manager)
+                    def distance_callback(from_index, to_index):
+                        from_node = manager.IndexToNode(from_index)
+                        to_node = manager.IndexToNode(to_index)
+                        return int(distance_matrix[from_node][to_node])
+                    transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+                    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+                    def demand_callback(from_index):
+                        from_node = manager.IndexToNode(from_index)
+                        return 0 if from_node == 0 else 1
+                    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
+                    routing.AddDimensionWithVehicleCapacity(
+                        demand_callback_index,
+                        0,
+                        [MAX_ORDERS_PER_COURIER]*num_vehicles,
+                        True,
+                        'Capacity')
+                    def time_callback(from_index, to_index):
+                        from_node = manager.IndexToNode(from_index)
+                        to_node = manager.IndexToNode(to_index)
+                        return int(time_matrix[from_node][to_node])
+                    time_callback_index = routing.RegisterTransitCallback(time_callback)
+                    routing.AddDimension(
+                        time_callback_index,
+                        30*60,
+                        24*3600,
+                        False,
+                        'Time')
+                    time_dimension = routing.GetDimensionOrDie('Time')
+                    for location_idx, (open_time, close_time) in enumerate(time_windows):
+                        time_dimension.CumulVar(location_idx).SetRange(open_time, close_time)
+                    for vehicle_id in range(num_vehicles):
+                        index = routing.Start(vehicle_id)
+                        time_dimension.CumulVar(index).SetValue(departure_time_sec)
+                    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+                    search_parameters.first_solution_strategy = (
+                        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
+                    solution = routing.SolveWithParameters(search_parameters)
+                    routes = []
+                    if solution:
+                        for vehicle_id in range(num_vehicles):
+                            index = routing.Start(vehicle_id)
+                            route = []
+                            route_distance = 0
+                            route_times = []
+                            acc_time = departure_time_sec
+                            while not routing.IsEnd(index):
+                                node = manager.IndexToNode(index)
+                                next_index = solution.Value(routing.NextVar(index))
+                                if node != 0:
+                                    route.append(node)
+                                    acc_time = solution.Value(time_dimension.CumulVar(index))
+                                    route_times.append(acc_time)
+                                if not routing.IsEnd(next_index):
+                                    route_distance += distance_matrix[node][manager.IndexToNode(next_index)]
+                                index = next_index
+                            routes.append({'route': route, 'distance': route_distance, 'times': route_times})
+                    return routes
+                routes = solve_vrp(distance_matrix, time_matrix, couriers, MAX_ORDERS_PER_COURIER, time_windows)
+                result = []
+                total_distance = 0
+                for i, route_info in enumerate(routes):
+                    route = route_info['route']
+                    route_addresses = [addresses[idx-1] for idx in route if idx > 0]
+                    courier_distance = route_info['distance'] / 1000
+                    courier_times = []
+                    for t, idx in zip(route_info['times'], route):
+                        if idx > 0:
+                            tw = time_windows[idx]
+                            in_window = tw[0] <= t <= tw[1]
+                            t_min = t // 60
+                            time_str = f"{t_min//60:02d}:{t_min%60:02d}"
+                            window_str = f"{tw[0]//3600:02d}:{(tw[0]%3600)//60:02d}-{tw[1]//3600:02d}:{(tw[1]%3600)//60:02d}"
+                            courier_times.append({'time': t_min, 'in_window': in_window, 'window': (tw[0]//60, tw[1]//60), 'time_str': time_str, 'window_str': window_str})
+                    total_distance += courier_distance
+                    result.append({'courier': i+1, 'addresses': route_addresses, 'distance': courier_distance, 'times': courier_times})
+                os.unlink(temp.name)
+            except Exception as e:
+                error = f'Помилка обробки файлу: {e}'
+        else:
+            error = 'Будь ласка, завантажте CSV-файл.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            html = render_template('partials/result.html', result=result, error=error, total_distance=total_distance)
+            return jsonify({'html': html})
+        else:
+            return render_template('generator.html', result=result, error=error, total_distance=total_distance)
+    return render_template('generator.html')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():

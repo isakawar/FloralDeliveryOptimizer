@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KVITKOVA POVNYA</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        body { background: #181818; color: #f8fafc; }
+        .insta-logo {
+            width: 96px; height: 96px; object-fit: cover; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 2px solid #fff; background: #fff;
+        }
+        .main-card { background: #232323; border-radius: 1.5rem; box-shadow: 0 2px 16px rgba(0,0,0,0.12); }
+        .btn-main { background: #c19a6b; color: #fff; font-weight: 600; border: none; }
+        .btn-main:hover { background: #a67c52; }
+        .btn-outline-light { color: #fff; border-color: #fff; }
+        .btn-outline-light:hover { background: #fff; color: #232323; }
+    </style>
+</head>
+<body>
+<div class="container py-5">
+    <div class="text-center mb-4">
+        <img src="/static/logoKvitkova.jpg" alt="Kvitkova Povnya Logo" class="insta-logo mb-2">
+        <h1 class="fw-bold">KVITKOVA POVNYA</h1>
+        <div class="mb-2">Квіти Київ | підписка на квіти</div>
+        <div class="mb-3" style="color:#c19a6b;">Квіти не тільки на свята</div>
+        <div class="mb-4">
+            <span class="me-3">Щотижнева/щомісячна підписка</span>
+            <span class="me-3">Безкоштовна доставка</span>
+            <span>Подарунки (ваза, ножиці)</span>
+        </div>
+    </div>
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8">
+            <div class="main-card p-5 text-center">
+                <div class="d-flex flex-column gap-4">
+                    <button class="btn btn-main btn-lg w-100" data-bs-toggle="modal" data-bs-target="#addOrderModal">Додати замовлення</button>
+                    <a href="/generator" class="btn btn-main btn-lg w-100">Розрахувати оптимальний маршрут</a>
+                    <button class="btn btn-outline-light btn-lg w-100" data-bs-toggle="modal" data-bs-target="#ordersModal">Переглянути замовлення</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="addOrderModal" tabindex="-1" aria-labelledby="addOrderModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addOrderModalLabel">Додати замовлення</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="addOrderForm" autocomplete="off">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Instagram</label>
+            <input type="text" class="form-control" name="instagram" placeholder="@vladbilobrov">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Адреса доставки</label>
+            <input type="text" class="form-control" name="address" placeholder="м. Київ, вул. ...">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Номер телефону</label>
+            <input type="tel" class="form-control" name="phone" placeholder="+380" id="phoneInput">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Тип замовлення</label>
+            <select class="form-select" name="order_type">
+              <option value="Разова">Разова</option>
+              <option value="Підписка">Підписка</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Розмір</label>
+            <select class="form-select" name="size">
+              <option value="M">M</option>
+              <option value="L">L</option>
+              <option value="XL">XL</option>
+              <option value="XXL">XXL</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Коментар</label>
+            <input type="text" class="form-control" name="comment" placeholder="Деталі, побажання...">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Часове вікно доставки</label>
+            <div class="row">
+              <div class="col">
+                <input type="time" class="form-control" name="time_window_start" placeholder="з">
+              </div>
+              <div class="col">
+                <input type="time" class="form-control" name="time_window_end" placeholder="до">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-main">Додати</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Orders Modal -->
+<div class="modal fade" id="ordersModal" tabindex="-1" aria-labelledby="ordersModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark text-light">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ordersModalLabel">Список замовлень</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="ordersList"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/imask"></script>
+<script>
+// Маска для телефону
+IMask(document.getElementById('phoneInput'), { mask: '+{380} 00 000 00 00' });
+
+document.getElementById('addOrderForm').onsubmit = function(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = {
+    instagram: form.instagram.value,
+    address: form.address.value,
+    phone: form.phone.value,
+    order_type: form.order_type.value,
+    size: form.size.value,
+    comment: form.comment.value,
+    time_window_start: form.time_window_start.value,
+    time_window_end: form.time_window_end.value
+  };
+  // Структура json:
+  // {
+  //   instagram: "@vladbilobrov",
+  //   address: "м. Київ, вул. ...",
+  //   phone: "+380 12 345 67 89",
+  //   order_type: "Разова" або "Підписка",
+  //   size: "M"/"L"/"XL"/"XXL",
+  //   comment: "...",
+  //   time_window_start: "08:00",
+  //   time_window_end: "12:00"
+  // }
+  console.log('Order JSON:', JSON.stringify(data, null, 2));
+  // Тут можна додати відправку на сервер або показати повідомлення
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addOrderModal'));
+  modal.hide();
+  form.reset();
+};
+
+// Мокані замовлення
+const mockOrders = [
+  {
+    instagram: '@vladbilobrov',
+    address: 'м. Київ, вул. Нагірна, 18/16',
+    phone: '+380 67 123 45 67',
+    order_type: 'Підписка',
+    size: 'L',
+    comment: 'Доставити до 10:00'
+  },
+  {
+    instagram: '@testuser',
+    address: 'м. Київ, вул. Хрещатик, 1',
+    phone: '+380 50 987 65 43',
+    order_type: 'Разова',
+    size: 'XL',
+    comment: 'Зателефонувати перед доставкою'
+  },
+  {
+    instagram: '@flowers',
+    address: 'м. Київ, вул. Саксаганського, 20',
+    phone: '+380 93 555 44 33',
+    order_type: 'Підписка',
+    size: 'M',
+    comment: ''
+  }
+];
+
+document.getElementById('ordersModal').addEventListener('show.bs.modal', function () {
+  const list = document.getElementById('ordersList');
+  if (mockOrders.length === 0) {
+    list.innerHTML = '<div class="text-muted">Замовлень поки немає.</div>';
+    return;
+  }
+  let html = '<table class="table table-dark table-striped table-hover align-middle"><thead><tr>' +
+    '<th>Instagram</th><th>Адреса</th><th>Телефон</th><th>Тип</th><th>Розмір</th><th>Коментар</th></tr></thead><tbody>';
+  for (const o of mockOrders) {
+    html += `<tr><td>${o.instagram}</td><td>${o.address}</td><td>${o.phone}</td><td>${o.order_type}</td><td>${o.size}</td><td>${o.comment}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  list.innerHTML = html;
+});
+</script>
+</body>
+</html> 

@@ -1,0 +1,39 @@
+{% if error %}
+<div class="alert alert-danger mt-4 text-center">{{ error }}</div>
+{% endif %}
+{% if result %}
+<div class="card mt-5 p-4 shadow-sm">
+    <h4 class="mb-3">Оптимальні маршрути для кур'єрів:</h4>
+    {% for courier in result %}
+    <div class="mb-4">
+        <h5>Кур'єр {{ courier.courier }}</h5>
+        {% if courier.addresses %}
+        <ol class="list-group list-group-numbered">
+            {% for address in courier.addresses %}
+            {% set tinfo = courier.times[loop.index0] %}
+            <li class="list-group-item">
+                {{ address }} 
+                <span class="text-muted">
+                    ({{ tinfo.time_str }})
+                    {% if tinfo.window[0] != 0 or tinfo.window[1] != 1440 %}
+                        | вікно: {{ tinfo.window_str }}
+                    {% endif %}
+                    {% if tinfo.in_window %}
+                        <span style="color:green;">&#10003;</span>
+                    {% else %}
+                        <span style="color:red;">&#10007;</span>
+                    {% endif %}
+                </span>
+            </li>
+            {% endfor %}
+        </ol>
+        <div class="mt-2 text-muted">Кілометраж: {{ courier.distance|round(2) }} км</div>
+        {% else %}
+        <div class="text-muted">Немає адрес</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <hr/>
+    <div class="fw-bold">Загальний кілометраж: {{ total_distance|round(2) }} км</div>
+</div>
+{% endif %} 
