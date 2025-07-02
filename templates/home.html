@@ -59,11 +59,11 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Адреса доставки</label>
-            <input type="text" class="form-control" name="address" placeholder="м. Київ, вул. ...">
+            <input type="text" class="form-control" name="address" placeholder="м. Київ, вул. ..." required>
           </div>
           <div class="mb-3">
             <label class="form-label">Номер телефону</label>
-            <input type="tel" class="form-control" name="phone" placeholder="+380" id="phoneInput">
+            <input type="tel" class="form-control" name="phone" placeholder="+380" id="phoneInput" required>
           </div>
           <div class="mb-3">
             <label class="form-label">Тип замовлення</label>
@@ -119,6 +119,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+        <button type="button" class="btn btn-main" id="downloadCsvBtn">Вивантажити адреси</button>
       </div>
     </div>
   </div>
@@ -133,6 +134,11 @@ IMask(document.getElementById('phoneInput'), { mask: '+{380} 00 000 00 00' });
 document.getElementById('addOrderForm').onsubmit = function(e) {
   e.preventDefault();
   const form = e.target;
+  // Перевірка обов'язкових полів
+  if (!form.address.value.trim() || !form.phone.value.trim()) {
+    alert('Будь ласка, заповніть адресу доставки та номер телефону!');
+    return;
+  }
   const data = {
     instagram: form.instagram.value,
     address: form.address.value,
@@ -143,23 +149,35 @@ document.getElementById('addOrderForm').onsubmit = function(e) {
     time_window_start: form.time_window_start.value,
     time_window_end: form.time_window_end.value
   };
-  // Структура json:
-  // {
-  //   instagram: "@vladbilobrov",
-  //   address: "м. Київ, вул. ...",
-  //   phone: "+380 12 345 67 89",
-  //   order_type: "Разова" або "Підписка",
-  //   size: "M"/"L"/"XL"/"XXL",
-  //   comment: "...",
-  //   time_window_start: "08:00",
-  //   time_window_end: "12:00"
-  // }
-  console.log('Order JSON:', JSON.stringify(data, null, 2));
-  // Тут можна додати відправку на сервер або показати повідомлення
+  // Додаємо у mockOrders
+  mockOrders.push(data);
+  // Якщо модалка замовлень відкрита — оновлюємо список
+  const ordersModal = document.getElementById('ordersModal');
+  if (ordersModal.classList.contains('show')) {
+    updateOrdersList();
+  }
   const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addOrderModal'));
   modal.hide();
   form.reset();
 };
+
+// Винести оновлення списку замовлень у функцію
+function updateOrdersList() {
+  const list = document.getElementById('ordersList');
+  if (!mockOrders.length) {
+    list.innerHTML = '<div class="text-muted">Замовлень поки немає.</div>';
+    return;
+  }
+  let html = '<table class="table table-dark table-striped table-hover align-middle"><thead><tr>' +
+    '<th>Instagram</th><th>Адреса</th><th>Телефон</th><th>Тип</th><th>Розмір</th><th>Коментар</th><th>Часове вікно</th></tr></thead><tbody>';
+  for (const o of mockOrders) {
+    html += `<tr><td>${o.instagram}</td><td>${o.address}</td><td>${o.phone}</td><td>${o.order_type}</td><td>${o.size}</td><td>${o.comment}</td><td>${(o.time_window_start||'') + (o.time_window_end ? ' - ' + o.time_window_end : '')}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  list.innerHTML = html;
+}
+
+document.getElementById('ordersModal').addEventListener('show.bs.modal', updateOrdersList);
 
 // Мокані замовлення
 const mockOrders = [
@@ -189,20 +207,30 @@ const mockOrders = [
   }
 ];
 
-document.getElementById('ordersModal').addEventListener('show.bs.modal', function () {
-  const list = document.getElementById('ordersList');
-  if (mockOrders.length === 0) {
-    list.innerHTML = '<div class="text-muted">Замовлень поки немає.</div>';
-    return;
-  }
-  let html = '<table class="table table-dark table-striped table-hover align-middle"><thead><tr>' +
-    '<th>Instagram</th><th>Адреса</th><th>Телефон</th><th>Тип</th><th>Розмір</th><th>Коментар</th></tr></thead><tbody>';
+document.getElementById('downloadCsvBtn').onclick = function() {
+  if (!mockOrders.length) return;
+  // Формуємо CSV-рядки
+  let csv = 'address,time_window_start,time_window_end\n';
   for (const o of mockOrders) {
-    html += `<tr><td>${o.instagram}</td><td>${o.address}</td><td>${o.phone}</td><td>${o.order_type}</td><td>${o.size}</td><td>${o.comment}</td></tr>`;
+    // Якщо немає time_window_start/end — залишаємо порожнім
+    const addr = (o.address || '').replace(/"/g, '""');
+    const start = o.time_window_start || '';
+    const end = o.time_window_end || '';
+    csv += `"${addr}",${start},${end}\n`;
   }
-  html += '</tbody></table>';
-  list.innerHTML = html;
-});
+  // Створюємо Blob і посилання для завантаження
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'orders.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+};
 </script>
 </body>
 </html> 
