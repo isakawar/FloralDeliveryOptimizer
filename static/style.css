@@ -1,0 +1,18 @@
+body {
+    background: #f8fafc;
+}
+h1 {
+    font-weight: 700;
+    color: #2c3e50;
+}
+.card {
+    border-radius: 1rem;
+}
+.btn-primary {
+    background: #007bff;
+    border: none;
+    font-weight: 600;
+}
+.btn-primary:hover {
+    background: #0056b3;
+} 

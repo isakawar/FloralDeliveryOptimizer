@@ -1,0 +1,6 @@
+requests
+pandas
+ortools
+flask
+gunicorn
+python-dotenv 
