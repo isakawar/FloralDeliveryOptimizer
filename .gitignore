@@ -30,6 +30,3 @@ htmlcov/
 
 # Node/npm (якщо є фронтенд)
 node_modules/
-
-# Не відслідковувати локальні дані
-orders.csv 
