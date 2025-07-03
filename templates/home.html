@@ -55,11 +55,31 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Instagram</label>
-            <input type="text" class="form-control" name="instagram" placeholder="@vladbilobrov">
+            <input type="text" class="form-control" name="instagram" id="instagramInput" placeholder="@vladbilobrov" lang="en">
           </div>
           <div class="mb-3">
-            <label class="form-label">Адреса доставки</label>
-            <input type="text" class="form-control" name="address" placeholder="м. Київ, вул. ..." required>
+            <label class="form-label">Місто</label>
+            <input type="text" class="form-control" name="city" id="cityField" placeholder="Місто" required lang="uk">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Вулиця</label>
+            <input type="text" class="form-control" name="street" id="streetField" placeholder="Почніть вводити назву вулиці..." required autocomplete="off" lang="uk">
+          </div>
+          <div class="mb-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label">Номер будинку</label>
+                <input type="text" class="form-control" name="building" id="buildingField" placeholder="231" required lang="uk">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">КВ/поверх</label>
+                <input type="text" class="form-control" name="apartment" id="apartmentField" placeholder="Квартира або поверх">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Під'їзд</label>
+                <input type="text" class="form-control" name="entrance" id="entranceField" placeholder="Під'їзд">
+              </div>
+            </div>
           </div>
           <div class="mb-3">
             <label class="form-label">Номер телефону</label>
@@ -135,13 +155,15 @@ document.getElementById('addOrderForm').onsubmit = function(e) {
   e.preventDefault();
   const form = e.target;
   // Перевірка обов'язкових полів
-  if (!form.address.value.trim() || !form.phone.value.trim()) {
-    alert('Будь ласка, заповніть адресу доставки та номер телефону!');
+  if (!form.city.value.trim() || !form.street.value.trim() || !form.building.value.trim() || !form.phone.value.trim()) {
+    alert('Будь ласка, заповніть місто, вулицю, номер будинку та номер телефону!');
     return;
   }
   const data = {
     instagram: form.instagram.value,
-    address: form.address.value,
+    city: form.city.value,
+    street: form.street.value,
+    building: form.building.value,
     phone: form.phone.value,
     order_type: form.order_type.value,
     size: form.size.value,
@@ -171,7 +193,7 @@ function updateOrdersList() {
   let html = '<table class="table table-dark table-striped table-hover align-middle"><thead><tr>' +
     '<th>Instagram</th><th>Адреса</th><th>Телефон</th><th>Тип</th><th>Розмір</th><th>Коментар</th><th>Часове вікно</th></tr></thead><tbody>';
   for (const o of mockOrders) {
-    html += `<tr><td>${o.instagram}</td><td>${o.address}</td><td>${o.phone}</td><td>${o.order_type}</td><td>${o.size}</td><td>${o.comment}</td><td>${(o.time_window_start||'') + (o.time_window_end ? ' - ' + o.time_window_end : '')}</td></tr>`;
+    html += `<tr><td>${o.instagram}</td><td>${o.city}, ${o.street}, ${o.building}</td><td>${o.phone}</td><td>${o.order_type}</td><td>${o.size}</td><td>${o.comment}</td><td>${(o.time_window_start||'') + (o.time_window_end ? ' - ' + o.time_window_end : '')}</td></tr>`;
   }
   html += '</tbody></table>';
   list.innerHTML = html;
@@ -183,7 +205,9 @@ document.getElementById('ordersModal').addEventListener('show.bs.modal', updateO
 const mockOrders = [
   {
     instagram: '@vladbilobrov',
-    address: 'м. Київ, вул. Нагірна, 18/16',
+    city: 'Київ',
+    street: 'Нагірна',
+    building: '18/16',
     phone: '+380 67 123 45 67',
     order_type: 'Підписка',
     size: 'L',
@@ -191,7 +215,9 @@ const mockOrders = [
   },
   {
     instagram: '@testuser',
-    address: 'м. Київ, вул. Хрещатик, 1',
+    city: 'Київ',
+    street: 'Хрещатик',
+    building: '1',
     phone: '+380 50 987 65 43',
     order_type: 'Разова',
     size: 'XL',
@@ -199,7 +225,9 @@ const mockOrders = [
   },
   {
     instagram: '@flowers',
-    address: 'м. Київ, вул. Саксаганського, 20',
+    city: 'Київ',
+    street: 'Саксаганського',
+    building: '20',
     phone: '+380 93 555 44 33',
     order_type: 'Підписка',
     size: 'M',
@@ -213,7 +241,7 @@ document.getElementById('downloadCsvBtn').onclick = function() {
   let csv = 'address,time_window_start,time_window_end\n';
   for (const o of mockOrders) {
     // Якщо немає time_window_start/end — залишаємо порожнім
-    const addr = (o.address || '').replace(/"/g, '""');
+    const addr = (o.city + ', ' + o.street + ', ' + o.building || '').replace(/"/g, '""');
     const start = o.time_window_start || '';
     const end = o.time_window_end || '';
     csv += `"${addr}",${start},${end}\n`;
@@ -231,6 +259,348 @@ document.getElementById('downloadCsvBtn').onclick = function() {
     URL.revokeObjectURL(url);
   }, 100);
 };
+
+function initSearchDropdowns() {
+  try {
+    const streetField = document.getElementById('streetField');
+    const cityField = document.getElementById('cityField');
+    const buildingField = document.getElementById('buildingField');
+    
+    if (!streetField || !cityField || !buildingField) {
+      console.error('Не знайдено необхідні поля форми');
+      return;
+    }
+    
+    // Перевіряємо чи доступний Google Maps API
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      console.error('Google Maps API недоступний');
+      createSearchDropdown(streetField, 'streets');
+      createSearchDropdown(cityField, 'cities');
+      return;
+    }
+    
+    // Створюємо пошук з Google Places API
+    createGoogleSearchDropdown(streetField, 'streets');
+    createGoogleSearchDropdown(cityField, 'cities');
+    
+  } catch (error) {
+    console.error('Помилка ініціалізації пошуку:', error);
+  }
+}
+
+// Функція для створення пошуку з Google Places API
+function createGoogleSearchDropdown(field, type) {
+  let dropdown = null;
+
+  field.addEventListener('input', function() {
+    const query = this.value;
+    if (query.length < 2) {
+      hideDropdown();
+      return;
+    }
+
+    hideDropdown();
+
+    dropdown = document.createElement('div');
+    dropdown.className = 'search-dropdown';
+    dropdown.style.cssText = `
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      color: #111;
+      border: 1px solid #ddd;
+      border-top: none;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1001;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    `;
+    
+    // Додаємо індикатор завантаження
+    const loadingItem = document.createElement('div');
+    loadingItem.textContent = 'Пошук...';
+    loadingItem.style.cssText = `
+      padding: 10px;
+      color: #666;
+      font-style: italic;
+    `;
+    dropdown.appendChild(loadingItem);
+    
+    field.parentNode.style.position = 'relative';
+    field.parentNode.appendChild(dropdown);
+    
+    // Google Places API
+    const service = new google.maps.places.AutocompleteService();
+    const request = {
+      input: query,
+      componentRestrictions: { country: 'ua' },
+      types: type === 'cities' ? ['(cities)'] : ['route']
+    };
+
+    service.getPlacePredictions(request, (predictions, status) => {
+      dropdown.innerHTML = '';
+      if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+        predictions.forEach(prediction => {
+          let displayText = prediction.description;
+          if (type === 'cities' || type === 'streets') {
+            displayText = prediction.structured_formatting.main_text;
+            if (!/[а-яіїєґА-ЯІЇЄҐ]/.test(displayText)) return;
+          }
+          const item = document.createElement('div');
+          item.className = 'search-item';
+          item.textContent = displayText;
+          item.style.cssText = `
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s, color 0.2s;
+            background: #fff;
+            color: #111;
+          `;
+          item.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f0f0f0';
+            this.style.color = '#111';
+          });
+          item.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '#fff';
+            this.style.color = '#111';
+          });
+          item.addEventListener('click', function() {
+            field.value = displayText;
+            hideDropdown();
+          });
+          dropdown.appendChild(item);
+        });
+      } else {
+        const noResults = document.createElement('div');
+        noResults.textContent = 'Нічого не знайдено';
+        noResults.style.cssText = `
+          padding: 10px;
+          color: #666;
+          font-style: italic;
+        `;
+        dropdown.appendChild(noResults);
+      }
+    });
+  });
+  
+  field.addEventListener('blur', function() {
+    setTimeout(hideDropdown, 200);
+  });
+  
+  function hideDropdown() {
+    if (dropdown) {
+      dropdown.remove();
+      dropdown = null;
+    }
+  }
+}
+
+// Простий пошук без Google API
+function createSearchDropdown(field, type = 'streets') {
+  const commonStreets = [
+    'Хрещатик',
+    'Велика Васильківська',
+    'Саксаганського',
+    'Нагірна',
+    'Берестейська',
+    'Січових Стрільців',
+    'Володимирська',
+    'Тарасівська',
+    'Пушкінська',
+    'Львівська',
+    'Золотоворітська',
+    'Ярославів Вал',
+    'Печерська',
+    'Кловський узвіз',
+    'Інститутська',
+    'Шовковична',
+    'Мазепи',
+    'Січових Стрільців',
+    'Бульвар Лесі Українки',
+    'Маршала Тимошенка'
+  ];
+  
+  const commonCities = [
+    'Київ',
+    'Львів',
+    'Харків',
+    'Одеса',
+    'Дніпро',
+    'Запоріжжя',
+    'Вінниця',
+    'Полтава',
+    'Черкаси',
+    'Суми',
+    'Хмельницький',
+    'Тернопіль',
+    'Рівне',
+    'Житомир',
+    'Чернігів',
+    'Чернівці',
+    'Івано-Франківськ',
+    'Луцьк',
+    'Ужгород',
+    'Кропивницький'
+  ];
+  
+  const data = type === 'cities' ? commonCities : commonStreets;
+  
+  field.addEventListener('input', function() {
+    const value = this.value.toLowerCase();
+    if (value.length < 2) {
+      // Приховуємо список якщо текст занадто короткий
+      const existingList = document.getElementById('street-suggestions');
+      if (existingList) existingList.remove();
+      return;
+    }
+    
+    const matches = data.filter(item => 
+      item.toLowerCase().includes(value)
+    );
+    
+    // Видаляємо попередній список
+    const existingList = document.getElementById('street-suggestions');
+    if (existingList) existingList.remove();
+    
+    if (matches.length > 0) {
+      const list = document.createElement('ul');
+      list.id = 'street-suggestions';
+      list.style.cssText = `
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        max-height: 150px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 1000;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      `;
+      
+      matches.forEach(street => {
+        const item = document.createElement('li');
+        item.textContent = street;
+        item.style.cssText = `
+          padding: 10px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+          transition: background-color 0.2s;
+        `;
+        item.addEventListener('click', function() {
+          field.value = item.textContent;
+          list.remove();
+        });
+        item.addEventListener('mouseenter', function() {
+          this.style.backgroundColor = '#f0f0f0';
+        });
+        item.addEventListener('mouseleave', function() {
+          this.style.backgroundColor = 'white';
+        });
+        list.appendChild(item);
+      });
+      
+      field.parentNode.style.position = 'relative';
+      field.parentNode.appendChild(list);
+    }
+  });
+  
+  // Приховуємо список при кліку поза ним
+  document.addEventListener('click', function(e) {
+    if (!field.contains(e.target)) {
+      const list = document.getElementById('street-suggestions');
+      if (list) list.remove();
+    }
+  });
+  
+  // Обробка клавіш для fallback автокомпліту
+  field.addEventListener('keydown', function(e) {
+    const list = document.getElementById('street-suggestions');
+    if (!list) return;
+    
+    const items = list.querySelectorAll('li');
+    const currentIndex = Array.from(items).findIndex(item => 
+      item.style.backgroundColor === 'rgb(240, 240, 240)'
+    );
+    
+    switch(e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        items.forEach(item => item.style.backgroundColor = 'white');
+        items[nextIndex].style.backgroundColor = '#f0f0f0';
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        items.forEach(item => item.style.backgroundColor = 'white');
+        items[prevIndex].style.backgroundColor = '#f0f0f0';
+        break;
+      case 'Enter':
+        e.preventDefault();
+        const selectedItem = list.querySelector('li[style*="background-color: rgb(240, 240, 240)"]');
+        if (selectedItem) {
+          field.value = selectedItem.textContent;
+          list.remove();
+        }
+        break;
+      case 'Escape':
+        list.remove();
+        break;
+    }
+  });
+}
+window.initAutocomplete = initSearchDropdowns;
+
+// Перевіряємо чи Google Maps API завантажився
+window.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM завантажений, перевіряємо Google Maps API...');
+  if (window.google && window.google.maps && window.google.maps.places) {
+    console.log('Google Maps API доступний, ініціалізуємо автокомпліт...');
+    initAutocomplete();
+  } else {
+    console.error('Google Maps API не завантажився або недоступний');
+    console.log('window.google:', window.google);
+    console.log('window.google.maps:', window.google?.maps);
+    console.log('window.google.maps.places:', window.google?.maps?.places);
+  }
+});
+
+// Додаткова перевірка на випадок, якщо API завантажиться пізніше
+window.addEventListener('load', function() {
+  if (window.google && window.google.maps && window.google.maps.places) {
+    if (!window.autocompleteInitialized) {
+      initAutocomplete();
+      window.autocompleteInitialized = true;
+    }
+  }
+});
+
+// document.getElementById('instagramInput').addEventListener('focus', function() {
+//   this.setAttribute('lang', 'en');
+//   this.setAttribute('placeholder', 'Instagram (ENG layout)');
+// });
+
+['cityField', 'streetField', 'buildingField'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('focus', function() {
+      this.setAttribute('lang', 'uk');
+      if (id === 'cityField') this.setAttribute('placeholder', 'Місто');
+      if (id === 'streetField') this.setAttribute('placeholder', 'Почніть вводити назву вулиці...');
+      if (id === 'buildingField') this.setAttribute('placeholder', 'Номер будинку');
+    });
+  }
+});
 </script>
+<script
+  src="https://maps.googleapis.com/maps/api/js?key={{ API_KEY or 'AIzaSyBbmw6d_MV5OUwsqFM_EIiQ31ZiYU0so8Y' }}&callback=initAutocomplete&libraries=places&v=weekly&language=uk"
+  defer
+></script>
 </body>
 </html> 

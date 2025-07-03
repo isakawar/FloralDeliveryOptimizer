@@ -72,7 +72,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def landing():
-    return render_template('home.html')
+    # Передаємо API ключ у шаблон для Google Maps
+    google_maps_api_key = API_KEY
+    return render_template('home.html', API_KEY=google_maps_api_key)
 
 @app.route('/generator', methods=['GET', 'POST'])
 def generator():
@@ -199,11 +201,13 @@ def generator():
             html = render_template('partials/result.html', result=result, error=error, total_distance=total_distance)
             return jsonify({'html': html})
         else:
-            return render_template('generator.html', result=result, error=error, total_distance=total_distance)
-    return render_template('generator.html')
+            return render_template('generator.html', result=result, error=error, total_distance=total_distance, API_KEY=API_KEY)
+    return render_template('generator.html', API_KEY=API_KEY)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    # Передаємо API ключ у шаблон для Google Maps
+    google_maps_api_key = API_KEY
     result = None
     error = None
     total_distance = 0
@@ -336,7 +340,7 @@ def index():
     print('DEBUG result:', result)
     print('DEBUG error:', error)
     print('DEBUG total_distance:', total_distance)
-    return render_template('index.html', result=result, error=error, total_distance=total_distance)
+    return render_template('home.html', result=result, error=error, total_distance=total_distance, API_KEY=google_maps_api_key)
 
 @app.route('/static/<path:filename>')
 def static_files(filename):
